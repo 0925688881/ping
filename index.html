@@ -71,7 +71,7 @@ footer a{color:#8290b6;text-decoration:underline;cursor:pointer}
 </div></section>
 
 <section id="levelPage" class="hidden"><div class="panel">
-  <div class="row"><h2 style="flex:1">⚔️ 十大試煉關卡</h2><button class="btn2" onclick="goHome()">返回</button></div>
+  <div class="row"><h2 style="flex:1">⚔️ 二十關恩典試煉</h2><button class="btn2" onclick="goHome()">返回</button></div>
   <div id="levelStats" class="small"></div>
   <div id="levelGrid" class="levels" style="margin-top:15px"></div>
 </div></section>
@@ -113,45 +113,57 @@ footer a{color:#8290b6;text-decoration:underline;cursor:pointer}
   </div>
   <div id="aShare" class="row hidden" style="margin-top:10px"><button class="btn2" onclick="copyOut()">📋 複製全部文字</button><button class="btn2" onclick="shareOut()">📤 分享／存到檔案</button></div>
   <textarea id="aIO" readonly class="hidden" style="min-height:120px"></textarea>
-  <div class="small" style="margin-top:8px">新增或匯入的題目會立刻加入遊戲（暫存在這個瀏覽器）。按「寫入 questions.js」才會存進檔案：電腦版 Chrome／Edge 會直接寫入你選的 questions.js；手機或其他瀏覽器會下載新的 questions.js，請用它取代舊檔。</div>
+  <div class="small" style="margin-top:8px">新增或匯入的題目會立刻加入遊戲（暫存在這個瀏覽器）。按「寫入 questions.js」才會存進檔案：支援的桌面瀏覽器會直接寫入你選的 questions.js；iPad／手機或其他瀏覽器會產生新的 questions.js，請用它取代舊檔。請保留本頁與 questions.js 在同一資料夾。</div>
 </div></section>
 
 <footer>品格勇士・恩典試煉｜學習聖經真理，培養美好品格<br><a onclick="openAdmin()">題庫後台</a></footer>
 </div>
 
 <script src="questions.js"></script>
-<script src="questions_character.js" onerror="void 0"></script>
 <script>
-const STORE="grace_knight_250_v1",CUSTOM="grace_knight_custom_v1",ADMIN_PIN="1234";
-const LEVEL_NAMES=["創世與起初","摩西與出埃及","士師與君王","先知與信心","詩篇與智慧","耶穌的降生","耶穌的教導","耶穌的神蹟","使徒與教會","信仰與品格"];
-const LEVEL_ICONS=["🌍","🌊","👑","🔥","📖","⭐","🕊️","✨","⛪","❤️"];
+const STORE="grace_knight_250_v1",CUSTOM="grace_knight_custom_v1",CUSTOM_SCHEMA="grace_knight_custom_schema_v1",ADMIN_PIN="1234",SCHEMA=20;
+const LEVEL_NAMES=["創世與起初","族長與應許","摩西與出埃及","曠野與律法","士師與信心","大衛與君王","先知與信心","先知與盼望","詩篇與智慧","智慧與生活","耶穌的降生","耶穌的身份","耶穌的教導","天國與門徒","耶穌的神蹟","十字架與復活","使徒與教會","初代教會","信仰與品格深化","拒絕毒品與生命守護"];
+const LEVEL_ICONS=["🌍","🌱","🌊","📜","⚔️","👑","🔥","🕊️","📖","💡","⭐","✝️","❤️","🕯️","✨","🕊️","⛪","🤝","💎","🛡️"];
 let baseRaw=(typeof raw!=="undefined"&&Array.isArray(raw))?raw.slice():[];
-if(typeof rawCharacter!=="undefined"&&Array.isArray(rawCharacter)){
-  const seen=new Set(baseRaw.map((it,i)=>it[0]+"|"+(Number(it[6])||Math.floor(i/25)+1)));
-  rawCharacter.forEach(it=>{if(!seen.has(it[0]+"|"+it[6]))baseRaw.push(it)});
-}
-function baseLevel(i){const it=baseRaw[i];return Number(it&&it[6])||Math.min(10,Math.floor(i/25)+1)}
+function baseLevel(i){const it=baseRaw[i];return Number(it&&it[6])||Math.min(20,Math.floor(i/25)+1)}
 
 let db=loadDB(),custom=loadCustom();
 mergeDuplicates();
 let current=null,activeLevel=0,quizItems=[],qIndex=0,rightCount=0,answered=false,quizMode="level",editingId=null;
 
-function loadCustom(){try{const c=JSON.parse(localStorage.getItem(CUSTOM));return Array.isArray(c)?c:[]}catch(e){return []}}
-function saveCustom(){try{localStorage.setItem(CUSTOM,JSON.stringify(custom));return true}catch(e){alert("儲存失敗：瀏覽器儲存空間不足。");return false}}
+function loadCustom(){
+  let list=[];
+  try{const c=JSON.parse(localStorage.getItem(CUSTOM));list=Array.isArray(c)?c:[]}catch(e){list=[]}
+  if(localStorage.getItem(CUSTOM_SCHEMA)!==String(SCHEMA)){
+    list.forEach(x=>{const n=Number(x.level)||1;if(n>=1&&n<=10)x.level=n*2;});
+    try{localStorage.setItem(CUSTOM,JSON.stringify(list));localStorage.setItem(CUSTOM_SCHEMA,String(SCHEMA))}catch(e){}
+  }
+  return list;
+}
+function saveCustom(){try{localStorage.setItem(CUSTOM,JSON.stringify(custom));localStorage.setItem(CUSTOM_SCHEMA,String(SCHEMA));return true}catch(e){alert("儲存失敗：瀏覽器儲存空間不足。");return false}}
 function loadDB(){
   try{
     const d=JSON.parse(localStorage.getItem(STORE))||{players:{}};
     if(!d.players)d.players={};
-    Object.values(d.players).forEach(p=>{p.records=p.records||{};p.answers=p.answers||{};p.wrongQuestions=p.wrongQuestions||{};p.unlocked=p.unlocked||1});
+    Object.values(d.players).forEach(p=>{
+      p.records=p.records||{};p.answers=p.answers||{};p.wrongQuestions=p.wrongQuestions||{};p.unlocked=p.unlocked||1;
+      if(d.levelSchema!==SCHEMA){
+        const old=p.records||{},mapped={};
+        Object.entries(old).forEach(([k,v])=>{const n=Number(k);if(n>=1&&n<=10)mapped[n*2]=v;else mapped[n]=v});
+        p.records=mapped;
+        p.unlocked=Math.min(20,Math.max(1,(Number(p.unlocked)||1)*2-1));
+      }
+    });
+    if(d.levelSchema!==SCHEMA){d.levelSchema=SCHEMA;try{localStorage.setItem(STORE,JSON.stringify(d))}catch(e){}}
     return d;
-  }catch(e){return {players:{}}}
+  }catch(e){return {players:{},levelSchema:SCHEMA}}
 }
-function saveDB(){try{localStorage.setItem(STORE,JSON.stringify(db));return true}catch(e){alert("儲存失敗：可能是瀏覽器儲存空間不足，請勿清除網站資料。");return false}}
+function saveDB(){try{db.levelSchema=SCHEMA;localStorage.setItem(STORE,JSON.stringify(db));return true}catch(e){alert("儲存失敗：可能是瀏覽器儲存空間不足，請勿清除網站資料。");return false}}
 function escapeHTML(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
-function cleanName(v){return String(v||"").trim().replace(/勇士$/,"").trim()}
+function cleanName(v){return String(v||"").trim().replace(/勇士$/," ").trim()}
 
 /* ===== 題庫存取 ===== */
-function customItem(c){return [c.q,c.a,c.w[0],c.w[1],c.w[2],c.exp||""]}
+function customItem(c){return [c.q,c.a,c.w[0],c.w[1],c.w[2],c.exp||"",c.level]}
 function getQ(id){
   if(String(id).startsWith("c")){const c=custom.find(x=>x.id===id);return c?customItem(c):null}
   return baseRaw[Number(id)]||null;
@@ -159,7 +171,7 @@ function getQ(id){
 function levelPool(level){
   const pool=[];
   baseRaw.forEach((it,i)=>{if(baseLevel(i)===level)pool.push({id:i,item:it,sourceLevel:level})});
-  custom.filter(c=>c.level===level).forEach(c=>pool.push({id:c.id,item:customItem(c),sourceLevel:level}));
+  custom.filter(c=>Number(c.level)===level).forEach(c=>pool.push({id:c.id,item:customItem(c),sourceLevel:level}));
   return pool;
 }
 
@@ -206,7 +218,7 @@ function renderAll(){
     const tw=document.createElement("div");tw.className="playerText";
     const sp=document.createElement("div");sp.className="playerName";sp.textContent="🛡️ "+name+"勇士";
     const info=document.createElement("div");info.className="playerInfo";
-    info.textContent=`⭐ 積分：${getScore(p)} 分　🏅 已通過：${passed}/10 關`;
+    info.textContent=`⭐ 積分：${getScore(p)} 分　🏅 已通過：${passed}/20 關`;
     tw.append(sp,info);
     const mk=(t,c,f)=>{const b=document.createElement("button");b.textContent=t;if(c)b.className=c;b.onclick=f;return b};
     div.append(tw,mk("改名","btn2",()=>editPlayerName(name)),mk("載入","",()=>loadPlayer(name)),mk("刪除","btnDanger",()=>deletePlayer(name)));
@@ -214,11 +226,11 @@ function renderAll(){
   });
 }
 function getScore(p){let s=0;Object.values(p.records||{}).forEach(r=>s+=r.score||0);return s}
-function highestCompleted(p){let h=0;for(let i=1;i<=10;i++)if(p.records[i]&&p.records[i].completed)h=i;return h}
+function highestCompleted(p){let h=0;for(let i=1;i<=20;i++)if(p.records[i]&&p.records[i].completed)h=i;return h}
 function eligibleWrongItems(p){
   const done=highestCompleted(p);
   return Object.entries(p.wrongQuestions||{})
-    .map(([id,info])=>({id,sourceLevel:Number(info.sourceLevel)||Math.floor(Number(id)/25)+1}))
+    .map(([id,info])=>{const q=getQ(id);return {id,sourceLevel:Number(q&&q[6])||Number(info.sourceLevel)||Math.floor(Number(id)/25)+1}})
     .filter(x=>x.sourceLevel<done&&getQ(x.id))
     .sort((a,b)=>a.sourceLevel-b.sourceLevel);
 }
@@ -230,12 +242,12 @@ function showLevels(){
   if(!current){alert("請先新增或載入小勇士！");return}
   hidePages();document.getElementById("levelPage").classList.remove("hidden");
   const p=db.players[current];
-  document.getElementById("levelStats").textContent=`${current}勇士｜累積積分 ${getScore(p)} 分｜已解鎖 ${p.unlocked}/10 關`;
+  document.getElementById("levelStats").textContent=`${current}勇士｜累積積分 ${getScore(p)} 分｜已解鎖 ${p.unlocked}/20 關`;
   const grid=document.getElementById("levelGrid");grid.innerHTML="";
   LEVEL_NAMES.forEach((name,i)=>{
     const unlocked=i+1<=p.unlocked,rec=p.records[i+1],n=Math.min(25,levelPool(i+1).length);
     const div=document.createElement("div");div.className="level"+(unlocked?"":" locked");
-    div.innerHTML=`<div class="emoji">${LEVEL_ICONS[i]}</div><strong>第 ${i+1} 關</strong>${escapeHTML(name)}<small>${rec?`最佳成績 ${rec.right}/${rec.total||25}`:`${n}題挑戰`}｜題庫 ${levelPool(i+1).length} 題${unlocked?"":"｜🔒 未解鎖"}</small>`;
+    div.innerHTML=`<div class="emoji">${LEVEL_ICONS[i]}</div><strong>第 ${i+1} 關</strong>${escapeHTML(name)}<small>${rec?`最佳成績 ${rec.right}/${rec.total||25}`:`每次隨機抽25題`}｜題庫 ${levelPool(i+1).length} 題${unlocked?"":"｜🔒 未解鎖"}</small>`;
     if(unlocked)div.onclick=()=>startLevel(i+1);
     grid.appendChild(div);
   });
@@ -255,7 +267,7 @@ function startLevel(level){
   const p=db.players[current];
   if(level>p.unlocked){alert("請先完成前面的關卡！");return}
   const pool=levelPool(level);
-  if(!pool.length){alert("這一關還沒有題目，請到「題庫後台」新增，或檢查 questions.js。");return}
+  if(pool.length<25){alert("這一關題目不足25題，請到「題庫後台」補充，或檢查 questions.js。");return}
   activeLevel=level;quizMode="level";
   quizItems=shuffle(pool).slice(0,25);qIndex=0;rightCount=0;beginQuiz();
 }
@@ -305,15 +317,15 @@ function nextQuestion(){
 function finishLevel(){
   const p=db.players[current],old=p.records[activeLevel]||{right:0,score:0},earned=rightCount*10,total=quizItems.length;
   const pass=rightCount>=Math.ceil(total*0.8);
-  p.records[activeLevel]={right:Math.max(old.right,rightCount),score:Math.max(old.score,earned),total:Math.max(old.total||0,total),completed:true};
-  if(pass&&activeLevel<10)p.unlocked=Math.max(p.unlocked,activeLevel+1);
+  p.records[activeLevel]={right:Math.max(old.right,rightCount),score:Math.max(old.score,earned),total:Math.max(old.total||0,total),completed:old.completed||pass};
+  if(pass&&activeLevel<20)p.unlocked=Math.max(p.unlocked,activeLevel+1);
   saveDB();
   hidePages();document.getElementById("resultPage").classList.remove("hidden");
   document.getElementById("resultTitle").textContent=pass?"🎉 關卡挑戰成功！":"💪 繼續努力！";
   document.getElementById("resultScore").textContent=`${rightCount} / ${total}`;
   const el=eligibleWrongItems(p).length,need=Math.ceil(total*0.8);
   document.getElementById("resultMessage").textContent=pass
-    ?`答對 ${rightCount} 題，獲得 ${earned} 分！${activeLevel<10?"下一關已解鎖！":"恭喜完成全部十關！"}${el?`目前有 ${el} 題舊錯題可以複習。`:""}`
+    ?`答對 ${rightCount} 題，獲得 ${earned} 分！${activeLevel<20?"下一關已解鎖！":"恭喜完成全部二十關！"}${el?`目前有 ${el} 題舊錯題可以複習。`:""}`
     :`答對 ${rightCount} 題。答對 ${need} 題即可解鎖下一關，再努力一次。`;
   renderAll();
 }
@@ -374,8 +386,8 @@ function deleteQuestion(id){
 function renderAdmin(){
   const st=document.getElementById("aStat");
   if(st){
-    const per=[...Array(10)].map((_,i)=>`${i+1}關:${levelPool(i+1).length}`).join("　");
-    st.textContent=`題庫共 ${baseRaw.length+custom.length} 題（questions.js 內 ${baseRaw.length}＋待寫入 ${custom.length}）\n各關題數：${per}`;
+    const per=[...Array(20)].map((_,i)=>`${i+1}關:${levelPool(i+1).length}`).join("　");
+    st.textContent=`題庫共 ${baseRaw.length+custom.length} 題（每關35題，每次隨機抽25題；questions.js 內 ${baseRaw.length}＋待寫入 ${custom.length}）\n各關題數：${per}`;
     st.style.whiteSpace="pre-line";
   }
   document.getElementById("aCount").textContent=custom.length;
@@ -392,7 +404,7 @@ function renderAdmin(){
 function mergeDuplicates(){
   let changed=false;
   custom=custom.filter(c=>{
-    const i=baseRaw.findIndex((it,k)=>it[0]===c.q&&baseLevel(k)===c.level);
+    const i=baseRaw.findIndex((it,k)=>it[0]===c.q&&baseLevel(k)===Number(c.level));
     if(i<0)return true;
     Object.values(db.players).forEach(p=>{if(p.wrongQuestions[c.id]){p.wrongQuestions[i]=p.wrongQuestions[c.id];delete p.wrongQuestions[c.id]}});
     changed=true;return false;
@@ -401,7 +413,7 @@ function mergeDuplicates(){
 }
 function buildFile(list){
   const lines=list.map(it=>"  "+JSON.stringify([it[0],it[1],it[2],it[3],it[4],it[5]||"",it[6]]));
-  return "/*\n題庫檔 questions.js\n格式：[題目,正確答案,錯誤答案1,錯誤答案2,錯誤答案3,解說,關卡]\n此檔由 index.html 的「題庫後台」匯出。\n*/\nconst raw=[\n"+lines.join(",\n")+"\n];\n";
+  return "/*\n題庫檔 questions.js（700題版本）\n格式：[題目,正確答案,錯誤答案1,錯誤答案2,錯誤答案3,解說,關卡]\n此檔由 index.html 的「題庫後台」匯出。\n*/\nconst raw=[\n"+lines.join(",\n")+"\n];\n";
 }
 function msg(t,ok){
   const m=document.getElementById("aMsg");
@@ -426,7 +438,7 @@ async function exportQ(){
   try{
     const all=[];
     baseRaw.forEach((it,i)=>{if(Array.isArray(it)&&it[0])all.push([it[0],it[1],it[2],it[3],it[4],it[5]||"",baseLevel(i)])});
-    custom.forEach(c=>all.push([c.q,c.a,c.w[0],c.w[1],c.w[2],c.exp||"",c.level]));
+    custom.forEach(c=>all.push([c.q,c.a,c.w[0],c.w[1],c.w[2],c.exp||"",Number(c.level)]));
     const text=buildFile(all);
     if(window.showSaveFilePicker){
       try{
@@ -450,7 +462,7 @@ function parseBackup(text){
   if(!text)throw new Error("檔案是空的");
   try{const j=JSON.parse(text);if(Array.isArray(j))return j}catch(e){}
   const clean=text.replace(/\/\*[\s\S]*?\*\//g,m=>m.replace(/[^\n]/g," "));
-  const S='("(?:[^"\\\\\\n]|\\\\.)*")';
+  const S='("(?:[^"\\\\\n]|\\\\.)*")';
   const re=new RegExp("\\[\\s*"+S+"\\s*,\\s*"+S+"\\s*,\\s*"+S+"\\s*,\\s*"+S+"\\s*,\\s*"+S+"\\s*(?:,\\s*"+S+")?\\s*(?:,\\s*(\\d+))?\\s*\\]","g");
   const marks=[];let mm;const mre=/\bL\(\s*(\d+)\s*,/g;
   while((mm=mre.exec(clean)))marks.push({pos:mm.index,level:Number(mm[1])});
@@ -460,7 +472,7 @@ function parseBackup(text){
     if(!level)for(const k of marks)if(k.pos<m.index)level=k.level;
     out.push([1,2,3,4,5,6].map(i=>m[i]===undefined?"":JSON.parse(m[i])).concat([level||0]));
   }
-  if(!out.length)throw new Error("檔案裡找不到題目（格式需為 [題目,正確答案,錯1,錯2,錯3,解說]）");
+  if(!out.length)throw new Error("檔案裡找不到題目（格式需為 [題目,正確答案,錯1,錯2,錯3,解說,關卡]）");
   return out;
 }
 function importText(txt){
@@ -468,12 +480,12 @@ function importText(txt){
   try{arr=parseBackup(txt)}
   catch(e){msg("無法讀取備份內容："+e.message+"。請選擇 questions.js 或匯出的檔案。",false);return}
   let ok=0,dup=0,bad=0,n=0;
-  const exists=(q,lv)=>custom.some(x=>x.q===q&&x.level===lv)||baseRaw.some((it,k)=>it[0]===q&&baseLevel(k)===lv);
+  const exists=(q,lv)=>custom.some(x=>x.q===q&&Number(x.level)===lv)||baseRaw.some((it,k)=>it[0]===q&&baseLevel(k)===lv);
   arr.forEach((x,idx)=>{
     let c=null;
-    if(Array.isArray(x))c={q:x[0],a:x[1],w:[x[2],x[3],x[4]],exp:x[5]||"",level:Number(x[6])||Math.min(10,Math.floor(idx/25)+1)};
+    if(Array.isArray(x))c={q:x[0],a:x[1],w:[x[2],x[3],x[4]],exp:x[5]||"",level:Number(x[6])||Math.min(20,Math.floor(idx/25)+1)};
     else if(x&&typeof x==="object")c={q:x.q,a:x.a,w:x.w,exp:x.exp||"",level:Number(x.level)};
-    if(!c||!c.q||!c.a||!Array.isArray(c.w)||c.w.length!==3||c.w.some(v=>!v)||!(c.level>=1&&c.level<=10)){bad++;return}
+    if(!c||!c.q||!c.a||!Array.isArray(c.w)||c.w.length!==3||c.w.some(v=>!v)||!(c.level>=1&&c.level<=20)){bad++;return}
     if(exists(c.q,c.level)){dup++;return}
     custom.push({id:"c"+Date.now()+"_"+(n++),level:c.level,q:String(c.q),a:String(c.a),w:c.w.map(String),exp:String(c.exp)});ok++;
   });
